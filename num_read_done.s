@@ -149,68 +149,69 @@ ValueBreakdown:
 	MOV r3, r1, LSR #31		;sign num 1		
 	MOV r4, r2, LSR #31		;sign num 2
 							;get exponents
-	MOV r11, r1, LSL #1		
-	MOV r12, r2, LSL #1		
-	MOV r5, r11, LSL #1
-	MOV r6, r12, LSL #1
+	MOV r5, r1, LSL #1		
+	MOV r6, r2, LSL #1
 	MOV r5, r5, LSR #24		;exponent num 1
 	MOV r6, r6, LSR #24		;exponent num 2
-	MOV r11, r11, LSR #31	;sign of exponent 1
-	MOV r12, r12, LSR #31	;sign of exponent 2
 	
-	CMP r11, r0
-	BEQ second_check
-	SUB r5, r0, r5
-second_check:
-	CMP r12, r0
-	BEQ fractions_get
-	SUB r6, r0, r6
 fractions_get:
 							;get fractions
 	MOV r10, #1
-	;MOV r9, #8
-	;ADD r9, r9, r5
-	MOV r7, r1, LSL #9
-	ADD r7, r7, r10
-	MOV r7, r7, ROR #1
+	MOV r7, r1, LSL #9		;shift out sign and exponent
+	ADD r7, r7, r10			;add the omitted top bit
+	MOV r7, r7, ROR #1		;rotate that bit to the beginning of the number
 	MOV r7, r7, LSR #8		;fraction num 1
-	XOR r9, r9, r9
-	;MOV r9, #8
-	;ADD r9, r9, r6
-	MOV r8, r1, LSL #9
-	ADD r8, r8, r10
-	MOV r8, r8, ROR #1
+	MOV r8, r1, LSL #9		;shift out sign and exponent
+	ADD r8, r8, r10			;add the omitted top bit
+	MOV r8, r8, ROR #1		;rotate that bit to the beginning of the number
 	MOV r8, r8, LSR #9		;fraction num 2
 	
-	;XOR r9, r9, r9
-	XOR r10, r10, r10
+	XOR r9, r9, r9
 	XOR r12, r12, r12
 	XOR r11, r11, r11
 	
-Addition:
-	SUB r9, r5, r6
+normalize_exponent:
+	MOV r1, #0xFFFFFFFF	;used with xor to flip bits
+	MOV r2, #0x80000000 ;used to check if sign highest order bit is set
+	MOV r11, #1			;used to store value of 1
+	SUB r9, r5, r6		;check the differnce in exponent 1 and 2
 	CMP r9, r0
 	BLT shift_second_num
 	MOV r7, r7			;stores num 1 with same exponent
 	MOV r8, r8, LSR r9	;stores num 2 with same exponent
-	B	signs
+	CMP r3, r0			;check num 1 sign bit
+	BEQ second_sign_first
+	XOR r7, r7, r1		;if negative, flip bits
+	ADD r7, r7, r11		;add one to change to twos compliment
+second_sign_first:	
+	CMP r4, r0			;check num 2 sign bit
+	BEQ	store_exp_first
+	XOR r8, r8, r1		;if negative, flip bits
+	ADD r8, r8, r11
+store_exp_first:
+	MOV r10, r5			;stores the largest exponent
+	B addition
+	
 shift_second_num:
+	SUB r9, r6, r5		;difference in exponent 2 and 1
 	MOV r7, r7, LSR r9	;stores num 1 with same exponent
-	SUB r9, r6, r5
 	MOV r8, r8, 		;stores num 2 with same exponent
+	CMP r3, r0			;check num 1 sign bit
+	BEQ second_sign_second
+	XOR r7, r7, r1		;if negative, flip bits
+	ADD r7, r7, r11		;add one to change to twos compliment
+second_sign_second:	
+	CMP r4, r0			;check num 2 sign bit
+	BEQ	store_exp_second
+	XOR r8, r8, r1		;if negative, flip bits
+	ADD r8, r8, r11		;add one to change to twos complement
+store_exp_second:	
+	MOV r10, r6 		;stores the largest exponent
 	
-	XOR r9, r9, r9
-	
-signs:
-	SUB r12, r3, r4
-	CMP r12, r0
-	BNE opposites_signs
-	
-	XOR r1, r1, r1
-	XOR r2, r2, r2
-	
-	ADD r1, r7, r8
-	
+addition:
+	ADD	r12, r7, r8
+	AND r13, r12, r2
+	MOV r13, r13, LSR #31
 	
 	.data
 readIn: .asciz "-1.56789$"
