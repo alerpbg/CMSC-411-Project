@@ -8,7 +8,6 @@ _start:
 	
 	MOV r3, #43		; ASCII for "+"
 	MOV r5, #46		; ASCII for "."
-	MOV  r9, #10 	; r9 contains the constant 10 for multiplication
 	
 	;take string and load a negative sign as a 1
 	;take the parts before the decimal and convert those to binary for one value
@@ -22,6 +21,9 @@ negative:
 	MOV r6,#1	;if sign is - then put 1in r6 for sign bit
 	MOV r1, #1	;set r1 to 1 (using r1 as string index offset)
 	STR r6, =signed_bit
+	
+	MOV r3, #0	; clear r3 for reuse (don't need to compare to "+" anymore)
+	MOV r6, #0	; clear r6 for reuse (signed bit already stored)
 	B number_start
 
 positive:
@@ -29,6 +31,7 @@ positive:
 	MOV r6,#0	;puts 0 in r6 for sign bit
 	MOV r1, #1	;set r1 to 1 (using r1 as string index offset)
 	STR r6, =signed_bit
+	MOV r6, #0  ; clear r6 for reuse
 
 number_start:
 
@@ -37,34 +40,53 @@ number_start:
 	CMP r2, r5		; if character is "." then jump
 	BEQ decimal_start
 	
-	SUB r2, r2, #48		; ASCII -> actual number
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
 	
-	MUL r7, r4, r9 	; multiply by 10, basically (MUL r7, r7, #10) but syntax won't allow
-	ADD r7, r7, r2	; add the new digit
-	MOV r4, r7 		; r4 = r7 so we can mult by itself
+	SUB r2, r2, #48	; ASCII -> actual number
+	ADD r9, r9, r2	; add the new digit
+	MOV r7, r9 		; r7 = r9 so we can "multiply" the sum by 10
 
 	B 	number_start
 
 decimal_start:
-	STR r4, =whole_num
-	MOV r3, #0
+	STR r9, =whole_num
+	MOV r2, #0
 	MOV r4, #0
 	MOV r5, #0
-	MOV r6, #0
 	MOV r7, #0
+	MOV r9, #0
 
 decimal_loop:
 
 	LDRB r2, [r0, r1]; get character in number string
 	ADD r1, r1, #1	; r1 is string index offset
-	SUB r2, r2, #48		; ASCII -> actual number
-	MUL r7, r4, r9 	; multiply by 10, basically (MUL r7, r7, #10) but syntax won't allow
-	ADD r7, r7, r2	; add the new digit
-	MOV r4, r7 		; r4 = r7 so we can mult by itself
+	CMP r2, #36		; if character is "$" then reached end of string
+	BEQ clear_regs
+	
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	ADD r9, r7, r9
+	
+	SUB r2, r2, #48	; ASCII -> actual number
+	ADD r9, r9, r2	; add the new digit
+	MOV r7, r9 		; r7 = r9 so we can "multiply" the sum by 10
 	
 	ADD r2, r2, #48
-	CMP r2, #36		; if character is "$" then reached end of string
-	BEQ decimal_loop
+	B decimal_loop
 	
 clear_regs:
 	STR r4, =frac_num ; store the fraction part into frac_num
@@ -82,7 +104,7 @@ clear_regs:
 	MOV r0, #16384 	; 2^14
 	LDR r1, =whole_num
 	
-whole2binary:
+exponent_convert:
 
 	SUB r2, r1, r0  ; remaining number minus by 2^x
 	
@@ -90,30 +112,31 @@ whole2binary:
 	;DIV r0, #2		; get 2^(x-1)
 	
 	CMP r2, #0		; if < 0, store a zero 
-	BLT zeroRem
+	BLT exponent_zero
 	
 	MUL r7, r4, r9 	; multiply by 10, basically (MUL r7, r7, #10) but syntax won't allow
 	ADD r7, r7, r8	; add the new digit
 	MOV r4, r7 		; r4 = r7 so we can mult by itself
 	
-	CMP r0, #0 		; if reached 2^0 != 0, then loop back up. Else, go to frac2binary
-	BNE whole2binary
-	B frac2binary
+	CMP r0, #0 		; if reached 2^0 != 0, then loop back up. Else, go to mantissa_convert
+	BNE exponent_convert
+	B mantissa_convert
 	
-zeroRem:
+exponent_zero:
+
 	MUL r7, r4, r9 	; multiply by 10, basically (MUL r7, r7, #10) but syntax won't allow
 	ADD r7, r7, r3	; add the new digit
 	MOV r4, r7 		; r4 = r7 so we can mult by itself
 	
 	CMP r0, #0 		; if reached 2^0 = 0, then end of exponent part
-	BNE whole2binary
+	BNE exponent_convert
 
-frac2binary:
+mantissa_convert:
 	
 	
 	
 	.data
-readIn: .asciz "-12.5$"
+readIn: .asciz "-1.56789$"
 
 signed_bit: .word 0
 whole_num: .word 0
