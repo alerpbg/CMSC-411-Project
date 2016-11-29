@@ -82,7 +82,7 @@ clear_regs:
 	MOV r0, #16384 	; 2^14
 	LDR r1, =whole_num
 	
-exponent_convert:
+whole2binary:
 
 	SUB r2, r1, r0  ; remaining number minus by 2^x
 	
@@ -90,26 +90,25 @@ exponent_convert:
 	;DIV r0, #2		; get 2^(x-1)
 	
 	CMP r2, #0		; if < 0, store a zero 
-	BLT exponent_zero
+	BLT zeroRem
 	
 	MUL r7, r4, r9 	; multiply by 10, basically (MUL r7, r7, #10) but syntax won't allow
 	ADD r7, r7, r8	; add the new digit
 	MOV r4, r7 		; r4 = r7 so we can mult by itself
 	
-	CMP r0, #0 		; if reached 2^0 != 0, then loop back up. Else, go to mantissa_convert
-	BNE exponent_convert
-	B mantissa_convert
+	CMP r0, #0 		; if reached 2^0 != 0, then loop back up. Else, go to frac2binary
+	BNE whole2binary
+	B frac2binary
 	
-exponent_zero:
-
+zeroRem:
 	MUL r7, r4, r9 	; multiply by 10, basically (MUL r7, r7, #10) but syntax won't allow
 	ADD r7, r7, r3	; add the new digit
 	MOV r4, r7 		; r4 = r7 so we can mult by itself
 	
 	CMP r0, #0 		; if reached 2^0 = 0, then end of exponent part
-	BNE exponent_convert
+	BNE whole2binary
 
-mantissa_convert:
+frac2binary:
 	
 	
 	
