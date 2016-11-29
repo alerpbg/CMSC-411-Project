@@ -131,7 +131,60 @@ exponent_zero:
 	BNE exponent_convert
 
 mantissa_convert:
+
+	MOV r0, #0
+	MOV r1, #0
+	MOV r2, #0
+	MOV r3, #0		
+	MOV r4, #0
+	MOV r5, #0
+	MOV r6, #0
+	MOV r7, #0
+	MOV r8, #0	
 	
+ValueBreakdown:
+	LDR r1, =num1
+	LDR r2, =num2
+							;get sign bit
+	MOV r3, r1, LSR #31		;sign num 1		
+	MOV r4, r2, LSR #31		;sign num 2
+							;get exponents
+	MOV r5, r1, LSL #1		;exponent num 1
+	MOV r6, r2, LSL #1		;exponent num 2
+	MOV r5, r5, LSR #24
+	MOV r6, r6, LSR #24
+							;get fractions
+	MOV r10, #1
+	;MOV r9, #8
+	;ADD r9, r9, r5
+	MOV r7, r1, LSL #9
+	ADD r7, r7, r10
+	MOV r7, r7, ROR #1
+	MOV r7, r7, LSR #8		;fraction num 1
+	XOR r9, r9, r9
+	;MOV r9, #8
+	;ADD r9, r9, r6
+	MOV r8, r1, LSL #9
+	ADD r8, r8, r10
+	MOV r8, r8, ROR #1
+	MOV r8, r8, LSR #9		;fraction num 2
+	
+	;XOR r9, r9, r9
+	XOR r10, r10, r10
+	
+Addition:
+	SUB r9, r5, r6
+	CMP r9, r0
+	BLT shift_second_num
+	MOV r10, r7, LSL r9	;stores num 1 with same exponent
+	MOV r11, r8			;stores num 2 with same exponent
+	B	signs
+shift_second_num:
+	MOV r10, r7			;stores num 1 with same exponent
+	SUB r9, r6, r5
+	MOV r11, r8, LSL r9 ;stores num 2 with same exponent
+	
+signs:
 	
 	
 	.data
@@ -143,5 +196,8 @@ frac_num: .word 0
 
 exponent: .word 0
 mantissa: .word 0
+
+num1: 	.word 0
+num2:	.word 0
 
 .end
