@@ -149,10 +149,23 @@ ValueBreakdown:
 	MOV r3, r1, LSR #31		;sign num 1		
 	MOV r4, r2, LSR #31		;sign num 2
 							;get exponents
-	MOV r5, r1, LSL #1		;exponent num 1
-	MOV r6, r2, LSL #1		;exponent num 2
-	MOV r5, r5, LSR #24
-	MOV r6, r6, LSR #24
+	MOV r11, r1, LSL #1		
+	MOV r12, r2, LSL #1		
+	MOV r5, r11, LSL #1
+	MOV r6, r12, LSL #1
+	MOV r5, r5, LSR #24		;exponent num 1
+	MOV r6, r6, LSR #24		;exponent num 2
+	MOV r11, r11, LSR #31	;sign of exponent 1
+	MOV r12, r12, LSR #31	;sign of exponent 2
+	
+	CMP r11, r0
+	BEQ second_check
+	SUB r5, r0, r5
+second_check:
+	CMP r12, r0
+	BEQ fractions_get
+	SUB r6, r0, r6
+fractions_get:
 							;get fractions
 	MOV r10, #1
 	;MOV r9, #8
@@ -171,20 +184,32 @@ ValueBreakdown:
 	
 	;XOR r9, r9, r9
 	XOR r10, r10, r10
+	XOR r12, r12, r12
+	XOR r11, r11, r11
 	
 Addition:
 	SUB r9, r5, r6
 	CMP r9, r0
 	BLT shift_second_num
-	MOV r10, r7, LSL r9	;stores num 1 with same exponent
-	MOV r11, r8			;stores num 2 with same exponent
+	MOV r7, r7			;stores num 1 with same exponent
+	MOV r8, r8, LSR r9	;stores num 2 with same exponent
 	B	signs
 shift_second_num:
-	MOV r10, r7			;stores num 1 with same exponent
+	MOV r7, r7, LSR r9	;stores num 1 with same exponent
 	SUB r9, r6, r5
-	MOV r11, r8, LSL r9 ;stores num 2 with same exponent
+	MOV r8, r8, 		;stores num 2 with same exponent
+	
+	XOR r9, r9, r9
 	
 signs:
+	SUB r12, r3, r4
+	CMP r12, r0
+	BNE opposites_signs
+	
+	XOR r1, r1, r1
+	XOR r2, r2, r2
+	
+	ADD r1, r7, r8
 	
 	
 	.data
