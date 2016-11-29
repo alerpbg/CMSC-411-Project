@@ -22,7 +22,6 @@ negative:
 	MOV r1, #1	;set r1 to 1 (using r1 as string index offset)
 	STR r6, =signed_bit
 	
-	MOV r3, #0	; clear r3 for reuse (don't need to compare to "+" anymore)
 	MOV r6, #0	; clear r6 for reuse (signed bit already stored)
 	B number_start
 
