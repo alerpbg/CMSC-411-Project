@@ -172,7 +172,7 @@ fractions_get:
 	
 normalize_exponent:
 	MOV r1, #0xFFFFFFFF	;used with xor to flip bits
-	MOV r2, #0x80000000 ;used to check if sign highest order bit is set
+	MOV r2, #0x01000000 ;2^24 to check if addition and subtraction shifts exponent
 	MOV r11, #1			;used to store value of 1
 	SUB r9, r5, r6		;check the differnce in exponent 1 and 2
 	CMP r9, r0
@@ -207,11 +207,37 @@ second_sign_second:
 	ADD r8, r8, r11		;add one to change to twos complement
 store_exp_second:	
 	MOV r10, r6 		;stores the largest exponent
-	
+	XOR r3, r3, r3
+	XOR r4, r4, r4
 addition:
-	ADD	r12, r7, r8
-	AND r13, r12, r2
-	MOV r13, r13, LSR #31
+	MOV r3, 0x00800000
+	ADD	r12, r7, r8			;stored num1 + num2	
+	MOV r13, r12, LSR #31	;stores the sign of addition
+	CMP r13, r0
+	BEQ add_exp
+	SUB r12, r12, r11		;subtract one from twos complement number
+	XOR r12, r12, r1		;flips bits since it is negative
+add_exp:
+	CMP r12, r2
+	BGE add_exp_greater
+	CMP r12, r3
+	BGT move_back
+	SUB r10, r10, r11
+	MOV r12, r12, LSL #1
+	B move_back 
+add_exp_greater:
+	ADD r10, r10, r11
+	MOV r12, r12, LSR #1
+
+move_back:
+	ADD r3, r3, r13
+	MOV r3, r3, LSL #8
+	ADD r3, r3, r10
+	MOV r3, r3, LSL #23
+	ADD r3, r3, r12
+	STR r3, =sum1and2
+	
+	
 	
 	.data
 readIn: .asciz "-1.56789$"
@@ -225,5 +251,7 @@ mantissa: .word 0
 
 num1: 	.word 0
 num2:	.word 0
+sum1and2:	.word 0
+
 
 .end
