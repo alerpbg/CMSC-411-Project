@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x4571d35c
+	LDR r1, =0xc3cc2e14
 
-	LDR r2, =0x3c4e703b
+	LDR r2, =0x41a1e354
 
 							;get sign bit
 
@@ -47,7 +47,7 @@ fractions_get:
 
 	MOV r7, r7, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r7, r7, LSR #8		;fraction num 1
+	MOV r7, r7, LSR #7		;fraction num 1
 
 	MOV r8, r2, LSL #9		;shift out sign and exponent
 
@@ -55,7 +55,7 @@ fractions_get:
 
 	MOV r8, r8, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r8, r8, LSR #8		;fraction num 2
+	MOV r8, r8, LSR #7		;fraction num 2
 
 	
 
@@ -72,7 +72,7 @@ normalize_exponent:
 
 	MOV r1, #0xFFFFFFFF	;used with xor to flip bits
 
-	MOV r2, #0x01000000 ;2^24 to check if addition and subtraction shifts exponent
+	MOV r2, #0x02000000 ;2^25 to check if addition and subtraction shifts exponent
 
 	MOV r11, #1			;used to store value of 1
 
@@ -107,6 +107,8 @@ second_sign_first:
 store_exp_first:
 
 	MOV r10, r5			;stores the largest exponent
+	
+	MOV r4, r5
 
 	B addition
 
@@ -141,19 +143,24 @@ second_sign_second:
 store_exp_second:	
 
 	MOV r10, r6 		;stores the largest exponent
-
+	
+	MOV r4, r6
+		
 	EOR r3, r3, r3
-
-	EOR r4, r4, r4
 
 addition:
 
-	MOV r3, #0x00800000
+	MOV r3, #0x01000000
 
-	ADD	r12, r7, r8			;stored num1 + num2	
+	ADDS	r12, r7, r8			;stored num1 + num2	
+
+	ADDCS r13, r13, r11
+	
+	BNE carried
 
 	MOV r13, r12, LSR #31	;stores the sign of addition
-
+	
+carried:	
 	CMP r13, r0
 
 	BEQ add_exp
@@ -170,7 +177,7 @@ add_exp:
 
 	CMP r12, r3
 
-	BGT move_back
+	BGE move_back
 
 	SUB r10, r10, r11
 
@@ -187,6 +194,13 @@ add_exp_greater:
 
 
 move_back:
+	EOR r3, r3, r3
+	
+	CMP r13, r11
+	
+	SUBGT r13, r13, r11
+	
+	MOV r12, r12, LSR #1;
 
 	ADD r3, r3, r13
 
@@ -202,9 +216,110 @@ move_back:
 	
 	ADD r3, r3, r12
 
-	STR r3, =sum1and2
-
+	LDR r5, =sum1and2 
 	
+	STR r3, [r5]
+	
+	
+	
+	EOR r13, r13, r13
+	
+	EOR r12, r12, r12
+	
+	MOV r10, r4
+	
+	EOR r14, r14, r14	
+	
+
+subtraction:
+	MOV r4, #0xF0000000
+	
+	CMP r8, r4 
+
+	BGE neg_sub
+	
+	EOR r8, r8, r1		;flip bits for twos complement subtraction
+	
+	ADD r8, r8, r11		;add one to change to twos complement
+	
+	B sub_start
+	
+neg_sub:
+	
+	SUB r8, r8, r11
+	
+	EOR r8, r8, r1		;flip bits for twos complement subtraction
+
+sub_start:
+	
+	MOV r4, #0x01000000
+
+	ADDS	r12, r7, r8			;stored num1 - num2	
+	
+	ADDCS r13, r13, r11
+	
+	CMP r13, r0
+	
+	BNE carried_sub
+
+	MOV r13, r12, LSR #31	;stores the sign of addition
+	
+carried_sub:
+
+	CMP r13, r0
+
+	BEQ add_exp_sub
+
+	SUB r12, r12, r11		;subtract one from twos complement number
+
+	EOR r12, r12, r1		;flips bits since it is negative
+
+add_exp_sub:
+
+	CMP r12, r2
+
+	BGE add_exp_greater_sub
+
+	CMP r12, r4
+
+	BGE move_back_sub
+
+	SUB r10, r10, r11
+
+	MOV r12, r12, LSL #1
+
+	B move_back_sub 
+
+add_exp_greater_sub:
+
+	ADD r10, r10, r11
+
+	MOV r12, r12, LSR #1
+
+
+
+move_back_sub:
+	EOR r4, r4, r4
+
+	MOV r12, r12, LSR #1;
+
+	ADD r4, r4, r13
+
+	MOV r4, r4, LSL #8
+
+	ADD r4, r4, r10
+
+	MOV r4, r4, LSL #23
+	
+	MOV r12, r12, LSL #9
+	
+	MOV r12, r12, LSR #9
+	
+	ADD r4, r4, r12
+	
+	LDR r5, =diff1and2 
+
+	STR r4, [r5]
 
 	
 
@@ -235,6 +350,8 @@ num1: 	.word 0
 num2:	.word 0
 
 sum1and2:	.word 0
+
+diff1and2:	.word 0
 
 
 
