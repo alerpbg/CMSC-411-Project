@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x10
+	LDR r1, =0x3F800000
 
-	LDR r2, =0x90000020
+	LDR r2, =0x40000000
 
 							;get sign bit
 
@@ -55,7 +55,7 @@ fractions_get:
 
 	MOV r8, r8, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r8, r8, LSR #9		;fraction num 2
+	MOV r8, r8, LSR #8		;fraction num 2, THIS WAS CHANGED FROM LSR #9 TO LSR #8
 
 	
 
