@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x10
+	LDR r1, =0x4571d35c
 
-	LDR r2, =0x90000020
+	LDR r2, =0x3c4e703b
 
 							;get sign bit
 
@@ -49,13 +49,13 @@ fractions_get:
 
 	MOV r7, r7, LSR #8		;fraction num 1
 
-	MOV r8, r1, LSL #9		;shift out sign and exponent
+	MOV r8, r2, LSL #9		;shift out sign and exponent
 
 	ADD r8, r8, r10			;add the omitted top bit
 
 	MOV r8, r8, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r8, r8, LSR #9		;fraction num 2
+	MOV r8, r8, LSR #8	;fraction num 2
 
 	
 
@@ -195,7 +195,11 @@ move_back:
 	ADD r3, r3, r10
 
 	MOV r3, r3, LSL #23
-
+	
+	MOV r12, r12, LSL #9
+	
+	MOV r12, r12, LSR #9
+	
 	ADD r3, r3, r12
 
 	STR r3, =sum1and2
