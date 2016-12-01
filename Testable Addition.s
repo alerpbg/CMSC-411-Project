@@ -145,12 +145,10 @@ store_exp_second:
 	MOV r10, r6 		;stores the largest exponent
 	
 	MOV r4, r6
-		
-	EOR r3, r3, r3
 
 addition:
 
-	MOV r3, #0x01000000
+	MOV r9, #0x01000000
 
 	ADDS	r12, r7, r8			;stored num1 + num2	
 
@@ -171,54 +169,50 @@ carried:
 
 add_exp:
 
-	CMP r12, r2
+	CMP r12, r2				;checks if exponent increased
 
-	BGE add_exp_greater
+	BGE add_exp_greater		
 
-	CMP r12, r3
+	CMP r12, r9				;checks if exponent decreased
 
 	BGE move_back
 
-	SUB r10, r10, r11
+	SUB r10, r10, r11		;decrements exponent
 
-	MOV r12, r12, LSL #1
+	MOV r12, r12, LSL #1	;shifts number to normalize decimal
 
 	B move_back 
 
 add_exp_greater:
 
-	ADD r10, r10, r11
+	ADD r10, r10, r11		;increments exponent
 
-	MOV r12, r12, LSR #1
+	MOV r12, r12, LSR #1	;shifts number to normalize decimal
 
 
 
 move_back:
-	EOR r3, r3, r3
+	EOR r9, r9, r9			;store answer in r9 and clear
 	
-	CMP r13, r11
-	
-	SUBGT r13, r13, r11
-	
-	MOV r12, r12, LSR #1;
+	MOV r12, r12, LSR #1;	;shift number to fix earlier displacement
 
-	ADD r3, r3, r13
+	ADD r9, r9, r13			;adds the sign to the answer
 
-	MOV r3, r3, LSL #8
+	MOV r9, r9, LSL #8		;shift to make space for exponent
 
-	ADD r3, r3, r10
+	ADD r9, r9, r10			;add the exponent to the answer
 
-	MOV r3, r3, LSL #23
+	MOV r9, r9, LSL #23		;shift to make space for the mantissa
 	
-	MOV r12, r12, LSL #9
+	MOV r12, r12, LSL #9	;shift out the highest order bit
 	
-	MOV r12, r12, LSR #9
+	MOV r12, r12, LSR #9	;shift back into the proper space
 	
-	ADD r3, r3, r12
+	ADD r9, r9, r12			;add the mantissa to the answer
 
-	LDR r5, =sum1and2 
+	LDR r14, =sum1and2 		;load the memory position of the sum
 	
-	STR r3, [r5]
+	STR r9, [r14]			;store the answer
 	
 	
 	
@@ -317,9 +311,39 @@ move_back_sub:
 	
 	ADD r4, r4, r12
 	
-	LDR r5, =diff1and2 
+	LDR r14, =diff1and2 
 
-	STR r4, [r5]
+	STR r4, [r14]
+	
+undo_negative:
+	
+	EOR r4, r4, r4
+	
+	MOV r4, #0xF0000000
+	
+	CMP r8, r4 
+
+	BGE neg_undo
+	
+	;change sign of multiplication
+	
+	EOR r3, r3, r11
+	
+	B mul_start
+	
+neg_undo:
+	
+	SUB r8, r8, r11
+	
+	EOR r8, r8, r1		;flip bits for twos complement subtraction
+	
+mul_start:
+	
+	CMP r8, r0
+	
+	
+	
+	SUB r8, r8, r11
 
 	
 
