@@ -55,7 +55,7 @@ fractions_get:
 
 	MOV r8, r8, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r8, r8, LSR #8	;fraction num 2
+	MOV r8, r8, LSR #8		;fraction num 2
 
 	
 
