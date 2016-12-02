@@ -337,16 +337,80 @@ neg_undo:
 	
 	EOR r8, r8, r1		;flip bits for twos complement subtraction
 	
+	EOR r12, r12, r12
+	
+	MOV r10, r5
+	
 mul_start:
 	
 	CMP r8, r0
 	
+	BEQ done_mul
 	
+	MOV r9, #0x01000000
+
+	ADDS	r12, r12, r7			;stored mul_sum + num1	
+
+mul_exp:
+
+	CMP r12, r2				;checks if exponent increased
+
+	BGE mul_exp_greater		
+
+	CMP r12, r9				;checks if exponent decreased
+
+	BGE move_back
+
+	SUB r10, r10, r11		;decrements exponent
+
+	MOV r12, r12, LSL #1	;shifts number to normalize decimal
+
+	B loopback
+	
+mul_exp_greater:
+
+	ADD r10, r10, r11		;increments exponent
+
+	MOV r12, r12, LSR #1	;shifts number to normalize decimal
 	
 	SUB r8, r8, r11
-
+loopback:
 	
+	B mul_start
 
+done_mul:
+	
+	CMP r3, r0
+	
+	BEQ mul_move_back
+	
+	SUB r12, r12, r11		;subtract one from twos complement number
+
+	EOR r12, r12, r1		;flips bits since it is negative
+
+mul_move_back:
+	
+	EOR r4, r4, r4
+
+	MOV r12, r12, LSR #1;
+
+	ADD r4, r4, r3
+
+	MOV r4, r4, LSL #8
+
+	ADD r4, r4, r10
+
+	MOV r4, r4, LSL #23
+	
+	MOV r12, r12, LSL #9
+	
+	MOV r12, r12, LSR #9
+	
+	ADD r4, r4, r12
+	
+	LDR r14, =mul1and2 
+
+	STR r4, [r14]
 	
 
 	.data
@@ -376,6 +440,8 @@ num2:	.word 0
 sum1and2:	.word 0
 
 diff1and2:	.word 0
+
+mul1and2:	.word 0
 
 
 
