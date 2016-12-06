@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0xc3cc2e14
+	LDR r1, =0x41c20000
 
-	LDR r2, =0x41a1e354
+	LDR r2, =0x41b4cccd
 
 							;get sign bit
 
@@ -47,7 +47,7 @@ fractions_get:
 
 	MOV r7, r7, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r7, r7, LSR #7		;fraction num 1
+	MOV r7, r7, LSR #2		;fraction num 1
 
 	MOV r8, r2, LSL #9		;shift out sign and exponent
 
@@ -55,7 +55,7 @@ fractions_get:
 
 	MOV r8, r8, ROR #1		;rotate that bit to the beginning of the number
 
-	MOV r8, r8, LSR #7		;fraction num 2
+	MOV r8, r8, LSR #2		;fraction num 2
 
 	
 
@@ -72,7 +72,7 @@ normalize_exponent:
 
 	MOV r1, #0xFFFFFFFF	;used with xor to flip bits
 
-	MOV r2, #0x02000000 ;2^25 to check if addition and subtraction shifts exponent
+	MOV r2, #0x40000000 ;2^32 to check if addition and subtraction shifts exponent
 
 	MOV r11, #1			;used to store value of 1
 
@@ -148,30 +148,47 @@ store_exp_second:
 
 addition:
 
-	MOV r9, #0x01000000
+	MOV r9, #0x20000000
 
 	ADDS	r12, r7, r8			;stored num1 + num2	
 
 	ADDCS r13, r13, r11
 	
-	BNE carried
-
-	MOV r13, r12, LSR #31	;stores the sign of addition
+	MOV r11, r12, LSR #31
 	
-carried:	
+	AND r13, r13, r11
+	
+	MOV r11, #1
+	
 	CMP r13, r0
-
-	BEQ add_exp
+	
+	BEQ check_sum	
 
 	SUB r12, r12, r11		;subtract one from twos complement number
 
 	EOR r12, r12, r1		;flips bits since it is negative
+	
+check_sum:
 
-add_exp:
+	CMP r12, r0
+	
+	BNE cont_add
+	
+	MOV r13, r0
+	
+	MOV r12, r0
+	
+	MOV r10, #127
+	
+	B move_back
+
+cont_add:
 
 	CMP r12, r2				;checks if exponent increased
 
 	BGE add_exp_greater		
+	
+dec_exp:
 
 	CMP r12, r9				;checks if exponent decreased
 
@@ -181,7 +198,7 @@ add_exp:
 
 	MOV r12, r12, LSL #1	;shifts number to normalize decimal
 
-	B move_back 
+	B dec_exp
 
 add_exp_greater:
 
@@ -194,7 +211,7 @@ add_exp_greater:
 move_back:
 	EOR r9, r9, r9			;store answer in r9 and clear
 	
-	MOV r12, r12, LSR #1;	;shift number to fix earlier displacement
+	MOV r12, r12, LSR #6;	;shift number to fix earlier displacement
 
 	ADD r9, r9, r13			;adds the sign to the answer
 
@@ -226,11 +243,13 @@ move_back:
 	
 
 subtraction:
-	MOV r4, #0xF0000000
+	MOV r4, #0x40000000
 	
-	CMP r8, r4 
+	AND r4, r4, r8
+	
+	CMP r4, r0 
 
-	BGE neg_sub
+	BNE neg_sub
 	
 	EOR r8, r8, r1		;flip bits for twos complement subtraction
 	
@@ -246,33 +265,47 @@ neg_sub:
 
 sub_start:
 	
-	MOV r4, #0x01000000
+	MOV r4, #0x20000000
 
 	ADDS	r12, r7, r8			;stored num1 - num2	
 	
 	ADDCS r13, r13, r11
 	
+	MOV r11, r12, LSR #31
+	
+	AND r13, r13, r11
+	
+	MOV r11, #1
+	
 	CMP r13, r0
 	
-	BNE carried_sub
-
-	MOV r13, r12, LSR #31	;stores the sign of addition
-	
-carried_sub:
-
-	CMP r13, r0
-
-	BEQ add_exp_sub
+	BEQ check_sum_sub	
 
 	SUB r12, r12, r11		;subtract one from twos complement number
 
 	EOR r12, r12, r1		;flips bits since it is negative
+	
+check_sum_sub:
+	
+	CMP r12, r0
+	
+	BNE cont_sub
+	
+	MOV r13, r0
+	
+	MOV r12, r0
+	
+	MOV r10, #127
+	
+	B move_back
 
-add_exp_sub:
+cont_sub:
 
 	CMP r12, r2
 
 	BGE add_exp_greater_sub
+	
+sub_dec_exp:
 
 	CMP r12, r4
 
@@ -282,7 +315,7 @@ add_exp_sub:
 
 	MOV r12, r12, LSL #1
 
-	B move_back_sub 
+	B sub_dec_exp 
 
 add_exp_greater_sub:
 
@@ -290,12 +323,10 @@ add_exp_greater_sub:
 
 	MOV r12, r12, LSR #1
 
-
-
 move_back_sub:
 	EOR r4, r4, r4
 
-	MOV r12, r12, LSR #1;
+	MOV r12, r12, LSR #6;
 
 	ADD r4, r4, r13
 
@@ -319,17 +350,19 @@ undo_negative:
 	
 	EOR r4, r4, r4
 	
-	MOV r4, #0xF0000000
+	MOV r4, #0x80000000
 	
-	CMP r8, r4 
+	AND r4, r4, r8
+	
+	CMP r4, r0
 
-	BGE neg_undo
+	BNE neg_undo
 	
 	;change sign of multiplication
 	
 	EOR r3, r3, r11
 	
-	B mul_start
+	B check_inc_neg
 	
 neg_undo:
 	
@@ -341,58 +374,101 @@ neg_undo:
 	
 	MOV r10, r5
 	
+	EOR r12, r12, r12
+	
+check_inc_neg:
+	
+	MOV r4, #0x80000000
+	
+	AND r4, r7, r4
+	
+	CMP r4, r0
+	
+	BEQ mul_exp
+	
+	SUB r7, r7, r11
+	
+	EOR r7, r7, r1
+	
+mul_exp:
+	
+	MOV r9, #127
+	
+	ADD	r10, r5, r6
+	
+	SUB r10, r10, r9
+	
+	SUB r6, r6, r9
+
+	MOV r2, #31
+	
+mul_dec_setup:
+	
+	AND r4, r8, r11
+
+	CMP r4, r11 
+	
+	BEQ mul_start
+	
+	MOV r8, r8, LSR #1
+	
+	SUB r2, r2, r11
+	
+	B mul_dec_setup
+	
 mul_start:
+	
+	MOV r4, #0x40000000
 	
 	CMP r8, r0
 	
 	BEQ done_mul
+
+	ADD	r12, r12, r7			;stored mul_sum + num1
 	
-	MOV r9, #0x01000000
-
-	ADDS	r12, r12, r7			;stored mul_sum + num1	
-
-mul_exp:
-
-	CMP r12, r2				;checks if exponent increased
-
-	BGE mul_exp_greater		
-
-	CMP r12, r9				;checks if exponent decreased
-
-	BGE move_back
-
-	SUB r10, r10, r11		;decrements exponent
-
-	MOV r12, r12, LSL #1	;shifts number to normalize decimal
-
-	B loopback
+	AND r4, r4, r12
 	
-mul_exp_greater:
-
-	ADD r10, r10, r11		;increments exponent
-
-	MOV r12, r12, LSR #1	;shifts number to normalize decimal
+	CMP r4, r0
 	
-	SUB r8, r8, r11
+	BEQ loopback
+	
+	MOV r12, r12, LSR #1
+	
+	MOV r7, r7, LSR #1
+	
+	ADD r13, r13, r11
+	
 loopback:
+
+	SUB r8, r8, r11
 	
 	B mul_start
 
 done_mul:
 	
-	CMP r3, r0
+	CMP r12, r0
 	
-	BEQ mul_move_back
+	BNE check_mul_exp
 	
-	SUB r12, r12, r11		;subtract one from twos complement number
+	MOV r13, r0
+	
+	MOV r12, r0
+	
+	MOV r10, #127
+	
+check_mul_exp:
 
-	EOR r12, r12, r1		;flips bits since it is negative
-
+	SUB r2, r2, r13
+	
+	MOV r12, r12, LSL r2
+	
+	ADD r10, r10, r2
+	
 mul_move_back:
 	
 	EOR r4, r4, r4
 
-	MOV r12, r12, LSR #1;
+	MOV r12, r12, LSR #6;
 
 	ADD r4, r4, r3
 
