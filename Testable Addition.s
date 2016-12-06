@@ -416,23 +416,27 @@ mul_dec_setup:
 	
 	B mul_dec_setup
 	
-mul_start:
+	MOV r7, r7, LSL #2
 	
-	MOV r4, #0x40000000
+mul_start:
+
+	EOR r4, r4, r4
 	
 	CMP r8, r0
 	
 	BEQ done_mul
 
-	ADD	r12, r12, r7			;stored mul_sum + num1
+	ADDS r12, r12, r7			;stored mul_sum + num1
 	
-	AND r4, r4, r12
+	ADDCS r4, r4, r11
 	
 	CMP r4, r0
 	
 	BEQ loopback
 	
-	MOV r12, r12, LSR #1
+	ORR r12, r12, r11
+	
+	MOV r12, r12, ROR #1
 	
 	MOV r7, r7, LSR #1
 	
@@ -458,17 +462,17 @@ done_mul:
 	
 check_mul_exp:
 
-	SUB r2, r2, r13
+	;SUB r2, r2, r13
 	
-	MOV r12, r12, LSL r2
+	;MOV r12, r12, LSL r2
 	
-	ADD r10, r10, r2
+	;ADD r10, r10, r2
 	
 mul_move_back:
 	
 	EOR r4, r4, r4
 
-	MOV r12, r12, LSR #6;
+	MOV r12, r12, LSR #8;
 
 	ADD r4, r4, r3
 
