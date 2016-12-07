@@ -15,7 +15,7 @@ ValueBreakdown:
 
 	LDR r1, =0x46ffaf50
 
-	LDR r2, =0x46ffaf33
+	LDR r2, =0xc6ffaf50
 
 							;get sign bit
 
@@ -148,15 +148,11 @@ store_exp_second:
 
 addition:
 
+	EOR r13, r13, r13
+
 	MOV r9, #0x20000000		;2^29 because if sum is below @^29 then it degcreased
 
-	ADDS	r12, r7, r8			;stored num1 + num2 and sets status bits (carry, zero, overflow, etc)	
-
-	ADDCS r13, r13, r11		;if carry set then add 1 to r13 to set carry bit to show negative number
-
-	CMP r13, r0			;r13 holds the sign of the sum, compare to 0 to see if carry bit is set
-
-	BNE neg_sum
+	ADD r12, r7, r8			;stored num1 + num2 and sets status bits (carry, zero, overflow, etc)	
 	
 	MOV r13, r12, LSR #31		;gets sign bit out of addition
 
@@ -180,7 +176,7 @@ check_sum:
 	
 	MOV r12, r0
 	
-	MOV r10, #127
+	MOV r10, r0
 	
 	B move_back
 
@@ -245,6 +241,9 @@ move_back:
 	
 
 subtraction:
+	
+	EOR r13, r13, r13
+	
 	MOV r4, #0x40000000   ;subtraction is the same as addition but with the added effect of switching the sign bits: all stuff before sub_start, rest is addition
 	
 	AND r4, r4, r8
@@ -269,13 +268,7 @@ sub_start:
 	
 	MOV r4, #0x20000000
 
-	ADDS	r12, r7, r8			;stored num1 - num2	
-	
-	ADDCS r13, r13, r11
-	
-	CMP r13, r0
-	
-	BNE neg_sub_flip
+	ADD	r12, r7, r8			;stored num1 - num2	
 	
 	MOV r13, r12, LSR #31		;gets sign bit out of addition
 
@@ -299,7 +292,7 @@ check_sum_sub:
 	
 	MOV r12, r0
 	
-	MOV r10, #127
+	MOV r10, r0
 	
 	B move_back_sub
 
