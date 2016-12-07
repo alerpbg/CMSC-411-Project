@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x41c20000
+	LDR r1, =0x46ffaf50
 
-	LDR r2, =0x41b4cccd
+	LDR r2, =0x46ffaf33
 
 							;get sign bit
 
@@ -297,7 +297,7 @@ check_sum_sub:
 	
 	MOV r10, #127
 	
-	B move_back
+	B move_back_sub
 
 cont_sub:
 
@@ -400,7 +400,7 @@ mul_exp:
 	
 	SUB r6, r6, r9
 
-	MOV r2, #31
+	MOV r2, #29
 	
 mul_dec_setup:
 	
@@ -462,11 +462,9 @@ done_mul:
 	
 check_mul_exp:
 
-	;SUB r2, r2, r13
+	SUB r2, r2, r13
 	
-	;MOV r12, r12, LSL r2
-	
-	;ADD r10, r10, r2
+	ADD r10, r10, r2
 	
 mul_move_back:
 	
