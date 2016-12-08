@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x46ffaf50
+	LDR r1, =0x41b48f5c
 
-	LDR r2, =0xc6ffaf50
+	LDR r2, =0x41dcf5c3
 
 							;get sign bit
 
@@ -400,43 +400,76 @@ mul_exp:
 	
 mul_dec_setup:
 	
-	AND r4, r8, r11 			;shifts everything right to get rid of trailing zeros
+	;AND r4, r8, r11 			;shifts everything right to get rid of trailing zeros
 
-	CMP r4, r11 
+	;CMP r4, r11 
 	
-	BEQ mul_start
+	;BEQ mul_start
 	
-	MOV r8, r8, LSR #1
+	;MOV r8, r8, LSR #1
 	
-	SUB r2, r2, r11
+	;SUB r2, r2, r11
 	
-	B mul_dec_setup
+	;B mul_dec_setup
 	
-	MOV r7, r7, LSL #2
+	MOV r8, r8, LSR #6
+	
+	;MOV r7, r7, LSL #2
+	
+	EOR r9, r9, r9
+	
+	EOR r14, r14, r14
 	
 mul_start:
-
-	EOR r4, r4, r4
 	
 	CMP r8, r0				;check r8 because that holds a value until you are done multiplying
 	
 	BEQ done_mul
+	
+	ADD r9, r9, r14
 
-	ADDS r12, r12, r7			;stored mul_sum + : first number to sum 2nd number number of times
+	ADD r12, r7, r12			;stored mul_sum + : first number to sum 2nd number number of times
 	
-	ADDCS r4, r4, r11			;check carrybit, inc r4 if it is set
+	MOV r4, #0x40000000
 	
-	CMP r4, r0				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
+	CMP r9, r4
+	
+	BLT check_overflow
+	
+	SUB r9, r9, r4
+	
+	ADD r12, r12, r11
+	
+check_overflow:
+	
+	CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
 		
-	BEQ loopback
+	BLT loopback
 	
-	ORR r12, r12, r11			;ors r12(current sum) with 1 which leaves everythig but sets first bit to 1 and moves it to the front which accounts for overflow
+	;ORR r12, r12, r11			;ors r12(current sum) with 1 which leaves everythig but sets first bit to 1 and moves it to the front which accounts for overflow
 	
-	MOV r12, r12, ROR #1
+	AND r4, r7, r11
+	
+	MOV r4, r4, LSL #28
+	
+	ADD r9, r9, r4
+	
+	MOV r9, r9, LSR #1
+	
+	AND r4, r12, r11
+	
+	MOV r4, r4, LSL #28
+	
+	ADD r14, r14, r4
+	
+	MOV r14, r14, LSR #1
+	
+	MOV r12, r12, LSR #1
 	
 	MOV r7, r7, LSR #1			; shifts the number you're adding the same amount to keep them aligned
 	
-	ADD r13, r13, r11			; counter above counts # of shifts over and subtract frm 32 and get difference at end, if difference add one to exponent
+	
+	ADD r13, r13, r11			; counter above counts # of shifts over and subtract frm 23 and get difference at end, if difference add one to exponent
 	
 loopback:
 
@@ -458,7 +491,9 @@ done_mul:
 	
 check_mul_exp:
 
-	SUB r2, r2, r13 			;checks difference between expected overflow and actual overflow, if difference. increase exponent by 1
+	MOV r2, #24
+
+	SUB r2, r13, r2 			;checks difference between expected overflow and actual overflow, if difference. increase exponent by 1
 	
 	ADD r10, r10, r2
 	
@@ -466,7 +501,7 @@ mul_move_back:
 	
 	EOR r4, r4, r4				;moves to place and stores in memory
 
-	MOV r12, r12, LSR #8;
+	MOV r12, r12, LSR #6;
 
 	ADD r4, r4, r3
 
