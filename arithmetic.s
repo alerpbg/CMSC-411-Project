@@ -414,11 +414,13 @@ mul_dec_setup:
 	
 	MOV r8, r8, LSR #6
 	
-	;MOV r7, r7, LSL #2
+	MOV r7, r7, LSR #6
 	
 	EOR r9, r9, r9
 	
 	EOR r14, r14, r14
+	
+	EOR r13, r13, r13
 	
 mul_start:
 	
@@ -426,43 +428,47 @@ mul_start:
 	
 	BEQ done_mul
 	
-	ADD r9, r9, r14
+	;ADD r9, r9, r14
 
 	ADD r12, r7, r12			;stored mul_sum + : first number to sum 2nd number number of times
 	
-	MOV r4, #0x40000000
+	MOV r4, #0x01000000
 	
-	CMP r9, r4
+	;CMP r9, r4
 	
-	BLT check_overflow
+	;BLT check_overflow
 	
-	SUB r9, r9, r4
+	;SUB r9, r9, r4
 	
-	ADD r12, r12, r11
+	;ADD r12, r12, r11
 	
 check_overflow:
 	
-	CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
+	;CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
 		
-	BLT loopback
+	;BLT loopback
 	
 	;ORR r12, r12, r11			;ors r12(current sum) with 1 which leaves everythig but sets first bit to 1 and moves it to the front which accounts for overflow
 	
-	AND r4, r7, r11
+	;AND r4, r7, r11
 	
-	MOV r4, r4, LSL #28
+	;MOV r4, r4, LSL #24
 	
-	ADD r9, r9, r4
+	;ADD r9, r9, r4
 	
-	MOV r9, r9, LSR #1
+	;MOV r9, r9, LSR #1
 	
-	AND r4, r12, r11
+	;AND r4, r12, r11
 	
-	MOV r4, r4, LSL #28
+	;MOV r4, r4, LSL #24
 	
-	ADD r14, r14, r4
+	;ADD r14, r14, r4
 	
-	MOV r14, r14, LSR #1
+	;MOV r14, r14, LSR #1
+	
+	CMP r12, r4
+	
+	BLT loopback
 	
 	MOV r12, r12, LSR #1
 	
@@ -501,7 +507,7 @@ mul_move_back:
 	
 	EOR r4, r4, r4				;moves to place and stores in memory
 
-	MOV r12, r12, LSR #6;
+	;MOV r12, r12, LSR #6
 
 	ADD r4, r4, r3
 
