@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x41b48f5c
+	LDR r1, =0x42B2872B
 
-	LDR r2, =0x41dcf5c3
+	LDR r2, =0x45532533
 
 							;get sign bit
 
@@ -428,52 +428,37 @@ mul_start:
 	
 	BEQ done_mul
 	
-	;ADD r9, r9, r14
+	ADDS r14, r9, r14
+	
+	ADDCS r12, r12, r11
 
 	ADD r12, r7, r12			;stored mul_sum + : first number to sum 2nd number number of times
 	
 	MOV r4, #0x01000000
 	
-	;CMP r9, r4
-	
-	;BLT check_overflow
-	
-	;SUB r9, r9, r4
-	
-	;ADD r12, r12, r11
-	
 check_overflow:
 	
-	;CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
+	CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
 		
-	;BLT loopback
+	BLT loopback
 	
 	;ORR r12, r12, r11			;ors r12(current sum) with 1 which leaves everythig but sets first bit to 1 and moves it to the front which accounts for overflow
 	
-	;AND r4, r7, r11
+	MOV r4, r7, LSL #31
 	
-	;MOV r4, r4, LSL #24
+	MOV r9, r9, LSR #1
 	
-	;ADD r9, r9, r4
+	ADD r9, r9, r4
 	
-	;MOV r9, r9, LSR #1
+	MOV r4, r12, LSL #31
 	
-	;AND r4, r12, r11
+	MOV r14, r14, LSR #1
 	
-	;MOV r4, r4, LSL #24
-	
-	;ADD r14, r14, r4
-	
-	;MOV r14, r14, LSR #1
-	
-	CMP r12, r4
-	
-	BLT loopback
+	ADD r14, r14, r4
 	
 	MOV r12, r12, LSR #1
 	
 	MOV r7, r7, LSR #1			; shifts the number you're adding the same amount to keep them aligned
-	
 	
 	ADD r13, r13, r11			; counter above counts # of shifts over and subtract frm 23 and get difference at end, if difference add one to exponent
 	
@@ -497,11 +482,15 @@ done_mul:
 	
 check_mul_exp:
 
-	MOV r2, #24
+	MOV r2, #23
 
 	SUB r2, r13, r2 			;checks difference between expected overflow and actual overflow, if difference. increase exponent by 1
 	
-	ADD r10, r10, r2
+	CMP r2, r0
+	
+	BLE mul_move_back
+	
+	ADD r10, r10, r11
 	
 mul_move_back:
 	
