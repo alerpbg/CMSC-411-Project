@@ -554,67 +554,33 @@ mul_exp:
 
 	MOV r2, #29
 	
-	CMP r7, r0
-	
-	BEQ mov_back_second
-	
-mul_dec_setup:
-
-	MOV r4, #0x01000000
-	
-	CMP r7, r4
-	
-	BLT mov_back_second
-	
-	MOV r7, r7, LSR #1
-	
-	B mul_dec_setup
-	
-mov_back_second:
-	
-	CMP r8, r0
-	
-	BEQ cont_mov
-
-	CMP r8, r4
-	
-	BLT cont_mov
-	
-	MOV r8, r8, LSR #1
-	
-	B mov_back_second
-	
-cont_mov:
-	
 	MOV r4, #0x00800000
 	
-	CMP r7, r0
+	LDR r7, =num1_mantissa		;gets the mantissas again
 	
-	BEQ mov_forward_second
-
-mov_forward_first:
-
-	CMP r7, r4
+	LDR r7, [r7]				
 	
-	BGE mov_forward_second
+	LDR r8, =num2_mantissa
 	
-	MOV r7, r7, LSL #1
+	LDR r8, [r8]
 	
-	B mov_forward_first
+	CMP r7, r0					;checks if the are zero, if not add hidden bit and shift into place
+	
+	BEQ second_check
+	
+	MOV r7, r7, LSR #9
+	
+	ADD r7, r7, r4
+	
+second_check:
 
-mov_forward_second:
-
-	CMP r8, r0
+	CMP r8, r0					;checks if the are zero, if not add hidden bit and shift into place
 	
 	BEQ cont
-
-	CMP r8, r4
 	
-	BGE cont
+	MOV r8, r8, LSR #9
 	
-	MOV r8, r8, LSL #1
-	
-	B mov_forward_second 
+	ADD r8, r8, r4	
 
 cont:
 	
