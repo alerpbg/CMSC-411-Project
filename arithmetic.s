@@ -13,9 +13,9 @@ _start:
 
 ValueBreakdown:
 
-	LDR r1, =0x42B2872B
+	LDR r1, =0xC5546333
 
-	LDR r2, =0x45532533
+	LDR r2, =0xC5532533
 
 							;get sign bit
 
@@ -399,22 +399,52 @@ mul_exp:
 	MOV r2, #29
 	
 mul_dec_setup:
-	
-	;AND r4, r8, r11 			;shifts everything right to get rid of trailing zeros
 
-	;CMP r4, r11 
+	MOV r4, #0x01000000
 	
-	;BEQ mul_start
+	CMP r7, r4
 	
-	;MOV r8, r8, LSR #1
+	BLT mov_back_second
 	
-	;SUB r2, r2, r11
+	MOV r7, r7, LSR #1
 	
-	;B mul_dec_setup
+	B mul_dec_setup
 	
-	MOV r8, r8, LSR #6
+mov_back_second:
+
+	CMP r8, r4
 	
-	MOV r7, r7, LSR #6
+	BLT cont_mov
+	
+	MOV r8, r8, LSR #1
+	
+	B mov_back_second
+	
+cont_mov:
+	
+	MOV r4, #0x00800000
+
+mov_forward_first:
+
+	CMP r7, r4
+	
+	BGE mov_forward_second
+	
+	MOV r7, r7, LSL #1
+	
+	B mov_forward_first
+
+mov_forward_second:
+
+	CMP r8, r4
+	
+	BGE cont
+	
+	MOV r8, r8, LSL #1
+	
+	B mov_forward_second 
+
+cont:
 	
 	EOR r9, r9, r9
 	

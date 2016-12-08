@@ -487,6 +487,210 @@ move_back_sub:
 	LDR r14, =diff1and2 
 
 	STR r4, [r14]
+	
+	
+undo_negative:
+	
+	EOR r4, r4, r4
+	
+	MOV r4, #0x80000000           ; holds 2^31 becaause largest number 
+	
+	AND r4, r4, r8
+	
+	CMP r4, r0
+
+	BNE neg_undo 			; flip 2nd sign value back if it was a positive number
+	
+	;change sign of multiplication
+	
+	EOR r3, r3, r11   		
+	
+	B check_inc_neg
+	
+neg_undo:
+	
+	SUB r8, r8, r11
+	
+	EOR r8, r8, r1		;flip bits for twos complement subtraction
+	
+	EOR r12, r12, r12
+	
+	MOV r10, r5
+	
+	EOR r12, r12, r12
+	
+check_inc_neg:
+	
+	MOV r4, #0x80000000          ;all of this checks if the first number is negative
+	
+	AND r4, r7, r4
+	
+	CMP r4, r0
+	
+	BEQ mul_exp
+	
+	SUB r7, r7, r11
+	
+	EOR r7, r7, r1
+	
+mul_exp:
+	MOV r9, #127				;gets final exponent(sum of two exponents except: + 1 if it overflows)
+	
+	ADD	r10, r5, r6			; add 127 after the addition
+	
+	SUB r10, r10, r9
+	
+	SUB r6, r6, r9
+
+	MOV r2, #29
+	
+mul_dec_setup:
+
+	MOV r4, #0x01000000
+	
+	CMP r7, r4
+	
+	BLT mov_back_second
+	
+	MOV r7, r7, LSR #1
+	
+	B mul_dec_setup
+	
+mov_back_second:
+
+	CMP r8, r4
+	
+	BLT cont_mov
+	
+	MOV r8, r8, LSR #1
+	
+	B mov_back_second
+	
+cont_mov:
+	
+	MOV r4, #0x00800000
+
+mov_forward_first:
+
+	CMP r7, r4
+	
+	BGE mov_forward_second
+	
+	MOV r7, r7, LSL #1
+	
+	B mov_forward_first
+
+mov_forward_second:
+
+	CMP r8, r4
+	
+	BGE cont
+	
+	MOV r8, r8, LSL #1
+	
+	B mov_forward_second 
+
+cont:
+	
+	EOR r9, r9, r9
+	
+	EOR r14, r14, r14
+	
+	EOR r13, r13, r13
+	
+mul_start:
+	
+	CMP r8, r0				;check r8 because that holds a value until you are done multiplying
+	
+	BEQ done_mul
+	
+	ADDS r14, r9, r14
+	
+	ADDCS r12, r12, r11
+
+	ADD r12, r7, r12			;stored mul_sum + : first number to sum 2nd number number of times
+	
+	MOV r4, #0x01000000
+	
+check_overflow:
+	
+	CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
+		
+	BLT loopback
+	
+	;ORR r12, r12, r11			;ors r12(current sum) with 1 which leaves everythig but sets first bit to 1 and moves it to the front which accounts for overflow
+	
+	MOV r4, r7, LSL #31
+	
+	MOV r9, r9, LSR #1
+	
+	ADD r9, r9, r4
+	
+	MOV r4, r12, LSL #31
+	
+	MOV r14, r14, LSR #1
+	
+	ADD r14, r14, r4
+	
+	MOV r12, r12, LSR #1
+	
+	MOV r7, r7, LSR #1			; shifts the number you're adding the same amount to keep them aligned
+	
+	ADD r13, r13, r11			; counter above counts # of shifts over and subtract frm 23 and get difference at end, if difference add one to exponent
+	
+loopback:
+
+	SUB r8, r8, r11				;# times decremented
+	
+	B mul_start
+
+done_mul:
+	
+	CMP r12, r0  			;zero case again accounted for
+	
+	BNE check_mul_exp
+	
+	MOV r13, r0
+	
+	MOV r12, r0
+	
+	MOV r10, #127
+	
+check_mul_exp:
+
+	MOV r2, #23
+
+	SUB r2, r13, r2 			;checks difference between expected overflow and actual overflow, if difference. increase exponent by 1
+	
+	CMP r2, r0
+	
+	BLE mul_move_back
+	
+	ADD r10, r10, r11
+	
+mul_move_back:
+	
+	EOR r4, r4, r4				;moves to place and stores in memory
+
+	;MOV r12, r12, LSR #6
+
+	ADD r4, r4, r3
+
+	MOV r4, r4, LSL #8
+
+	ADD r4, r4, r10
+
+	MOV r4, r4, LSL #23
+	
+	MOV r12, r12, LSL #9
+	
+	MOV r12, r12, LSR #9
+	
+	ADD r4, r4, r12
+	
+	LDR r14, =mul1and2 
+
+	STR r4, [r14]
 
 	LDR r1, =ieee1
 	LDR r2, =ieee2
@@ -521,7 +725,7 @@ mantissa: .word 0
 ;num2:	.word 0
 sum1and2:	.word 0
 diff1and2:	.word 0
-;mul1and2:	.word 0
+mul1and2:	.word 0
 	
 .end
 
