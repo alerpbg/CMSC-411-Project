@@ -15,7 +15,7 @@ _start:
 	LDR r2, =0x3001A000
 
 	CMP r1, #0
-	BEQ store_zero_num1
+	BEQ num2_start
 
 
 	MOV r3, r1, LSR #31		;@sign num 1		
@@ -93,7 +93,7 @@ num2_start:
 	EOR r10, r10, r10
 
 	CMP r2, #0
-	BEQ store_zero_num2	
+	BEQ float_pt_mul
 
 	MOV r3, r2, LSL #1		;@ num2 without sign bit
 	MOV r8, #14 			;@ counter for the integer mark
@@ -150,23 +150,6 @@ num2_mant:
 
 	B float_pt_mul
 
-store_zero_num1:
-
-	MOV r0, #0
-	STR r0, =ieee2		;@store zero into memory
-	STR r0, =num1_sign
-	STR r0, =num1_exp
-	STR r0, =num1_mantissa
-	B num2_start 
-
-store_zero_num2:
-
-	MOV r0, #0
-	STR r0, =ieee2		;@store zero into memory
-	STR r0, =num2_sign
-	STR r0, =num2_exp
-	STR r0, =num2_mantissa
-
 float_pt_mul:
 
 	LDR r1, =ieee1
@@ -201,6 +184,10 @@ fractions_get:
 							;get fractions
 
 	MOV r10, #1
+	
+	CMP r1, r0
+	
+	BEQ num2_frac
 
 	MOV r7, r1, LSL #9		;shift out sign and exponent
 
@@ -209,6 +196,12 @@ fractions_get:
 	MOV r7, r7, ROR #1		;rotate that bit to the beginning of the number
 
 	MOV r7, r7, LSR #2		;fraction num 1
+
+num2_frac:
+	
+	CMP r2, r0
+	
+	BEQ bit_clear
 
 	MOV r8, r2, LSL #9		;shift out sign and exponent
 
@@ -219,6 +212,7 @@ fractions_get:
 	MOV r8, r8, LSR #2		;fraction num 2
 
 	
+bit_clear:
 
 	EOR r9, r9, r9
 
@@ -445,7 +439,7 @@ neg_sub_flip:
 	
 check_sum_sub:
 	
-	CMP r12, r0
+	CMP r12, r0				;check if the difference is 0
 	
 	BNE cont_sub
 	
@@ -459,13 +453,13 @@ check_sum_sub:
 
 cont_sub:
 
-	CMP r12, r2
+	CMP r12, r2				;check to see if sum exponent increased
 
 	BGE add_exp_greater_sub
 	
 sub_dec_exp:
 
-	CMP r12, r4
+	CMP r12, r4				;checks if sum exponent decreased, and keeps decreasing until the number is in the proper position
 
 	BGE move_back_sub
 
@@ -477,12 +471,12 @@ sub_dec_exp:
 
 add_exp_greater_sub:
 
-	ADD r10, r10, r11
+	ADD r10, r10, r11		;increments exponent
 
 	MOV r12, r12, LSR #1
 
 move_back_sub:
-	EOR r4, r4, r4
+	EOR r4, r4, r4			;move subtraction back into position
 
 	MOV r12, r12, LSR #6;
 
@@ -507,9 +501,9 @@ move_back_sub:
 	
 undo_negative:
 	
-	EOR r4, r4, r4
+	EOR r4, r4, r4				;if the second number was changed to a negative, change it back
 	
-	MOV r4, #0x80000000           ; holds 2^31 becaause largest number 
+	MOV r4, #0x80000000         ; holds 2^31 becaause largest number 
 	
 	AND r4, r4, r8
 	
@@ -519,13 +513,13 @@ undo_negative:
 	
 	;change sign of multiplication
 	
-	EOR r3, r3, r11   		
+	EOR r3, r3, r11   		;since second number was a negative, the sign will be the opposite of what the sign of the first number was.
 	
 	B check_inc_neg
 	
 neg_undo:
 	
-	SUB r8, r8, r11
+	SUB r8, r8, r11		;flips the negative number to decrement a positive number
 	
 	EOR r8, r8, r1		;flip bits for twos complement subtraction
 	
@@ -560,6 +554,10 @@ mul_exp:
 
 	MOV r2, #29
 	
+	CMP r7, r0
+	
+	BEQ mov_back_second
+	
 mul_dec_setup:
 
 	MOV r4, #0x01000000
@@ -573,6 +571,10 @@ mul_dec_setup:
 	B mul_dec_setup
 	
 mov_back_second:
+	
+	CMP r8, r0
+	
+	BEQ cont_mov
 
 	CMP r8, r4
 	
@@ -585,6 +587,10 @@ mov_back_second:
 cont_mov:
 	
 	MOV r4, #0x00800000
+	
+	CMP r7, r0
+	
+	BEQ mov_forward_second
 
 mov_forward_first:
 
@@ -597,6 +603,10 @@ mov_forward_first:
 	B mov_forward_first
 
 mov_forward_second:
+
+	CMP r8, r0
+	
+	BEQ cont
 
 	CMP r8, r4
 	
@@ -614,41 +624,41 @@ cont:
 	
 	EOR r13, r13, r13
 	
+	EOR r12, r12, r12
+	
 mul_start:
 	
 	CMP r8, r0				;check r8 because that holds a value until you are done multiplying
 	
 	BEQ done_mul
 	
-	ADDS r14, r9, r14
+	ADDS r14, r9, r14		;adds bits below the highest 24 bits of the sum
 	
-	ADDCS r12, r12, r11
+	ADDCS r12, r12, r11		;if the lower bits carry, add that carry to the upper bits
 
-	ADD r12, r7, r12			;stored mul_sum + : first number to sum 2nd number number of times
+	ADD r12, r7, r12		;stored mul_sum + : first number to sum 2nd number number of times
 	
-	MOV r4, #0x01000000
+	MOV r4, #0x01000000		;2^24 to check if overflow occured
 	
 check_overflow:
 	
-	CMP r12, r4				;check if it was incremented, if it was shift everything right 1 and add 1 to the front 
+	CMP r12, r4				;check if it was incremented, if it was shift everything right 1 
 		
 	BLT loopback
 	
-	;ORR r12, r12, r11			;ors r12(current sum) with 1 which leaves everythig but sets first bit to 1 and moves it to the front which accounts for overflow
+	MOV r4, r7, LSL #31		;get the bit to be moved back
 	
-	MOV r4, r7, LSL #31
+	MOV r9, r9, LSR #1		;shift to make space for the new bit
 	
-	MOV r9, r9, LSR #1
+	ADD r9, r9, r4			;add the new bit to the lower order bits
 	
-	ADD r9, r9, r4
+	MOV r4, r12, LSL #31	;get the bit in the sum to be moved back
 	
-	MOV r4, r12, LSL #31
+	MOV r14, r14, LSR #1	;make space for the bit
 	
-	MOV r14, r14, LSR #1
+	ADD r14, r14, r4		;add the new bit to the lower order bits of the sum
 	
-	ADD r14, r14, r4
-	
-	MOV r12, r12, LSR #1
+	MOV r12, r12, LSR #1		;shifts to the right because the number has moved to the next highest bit
 	
 	MOV r7, r7, LSR #1			; shifts the number you're adding the same amount to keep them aligned
 	
@@ -662,23 +672,25 @@ loopback:
 
 done_mul:
 	
-	CMP r12, r0  			;zero case again accounted for
+	CMP r12, r0  			;zero case accounted for in multiplication
 	
 	BNE check_mul_exp
 	
-	MOV r13, r0
+	MOV r3, r0
 	
 	MOV r12, r0
 	
-	MOV r10, #127
+	MOV r10, r0
+	
+	B mul_move_back
 	
 check_mul_exp:
 
-	MOV r2, #23
+	MOV r2, #23					
 
-	SUB r2, r13, r2 			;checks difference between expected overflow and actual overflow, if difference. increase exponent by 1
+	SUB r2, r13, r2 			;checks difference between expected overflow(23) and actual overflow, if difference. increase exponent by 1
 	
-	CMP r2, r0
+	CMP r2, r0					;if the difference is not zero, add 1 to the exponent since overflow is greater than expected
 	
 	BLE mul_move_back
 	
@@ -688,23 +700,21 @@ mul_move_back:
 	
 	EOR r4, r4, r4				;moves to place and stores in memory
 
-	;MOV r12, r12, LSR #6
+	ADD r4, r4, r3				;adds the sign
 
-	ADD r4, r4, r3
+	MOV r4, r4, LSL #8			;makes space of the exponent
 
-	MOV r4, r4, LSL #8
+	ADD r4, r4, r10				;adds the exponent
 
-	ADD r4, r4, r10
-
-	MOV r4, r4, LSL #23
+	MOV r4, r4, LSL #23			;makes space for the mantissa
 	
-	MOV r12, r12, LSL #9
+	MOV r12, r12, LSL #9		;shifts out the highest bit
 	
-	MOV r12, r12, LSR #9
+	MOV r12, r12, LSR #9		;shifts back into place
 	
-	ADD r4, r4, r12
+	ADD r4, r4, r12				;adds mantissa to ieee 754
 	
-	LDR r14, =mul1and2 
+	LDR r14, =mul1and2 			
 
 	STR r4, [r14]
 
